@@ -1,0 +1,14 @@
+{
+  "category.official_capes": "Official Capes",
+  "key.official_capes.open_gui": "Open Cape Menu",
+  "key.official_capes.toggle_cape": "Toggle Cape Visibility",
+  "category.official_capes.all": "All",
+  "category.official_capes.minecon": "Minecon",
+  "category.official_capes.staff": "Staff",
+  "category.official_capes.events": "Events",
+  "category.official_capes.community": "Community",
+  "category.official_capes.special": "Special",
+  "text.official_capes.title": "Official Capes & Physics",
+  "text.official_capes.enabled": "Cape Enabled",
+  "text.official_capes.disabled": "Cape Disabled"
+}

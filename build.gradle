@@ -1,0 +1,7 @@
+allprojects {
+    group = 'net.officialcapes'
+}
+
+subprojects {
+    apply plugin: 'java'
+}

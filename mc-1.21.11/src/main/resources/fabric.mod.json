@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "official_capes",
+  "version": "${version}",
+  "name": "Official Capes & Physics",
+  "description": "Client-seitige Minecraft Mod mit allen offiziellen Capes, Dawn/NoRisk Physik, GUI, Keybinds und Befehlen.",
+  "authors": [
+    "Zentrix"
+  ],
+  "contact": {
+    "homepage": "https://github.com/zentrix/official-capes-physics"
+  },
+  "license": "MIT",
+  "icon": "assets/official_capes/textures/capes/minecon_2011.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "net.officialcapes.OfficialCapesClient"
+    ]
+  },
+  "mixins": [
+    "official_capes.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

@@ -1,0 +1,40 @@
+# Gradle
+.gradle/
+build/
+mc-1.21.11/build/
+mc-26.2/build/
+mc-1.21.11/.gradle/
+mc-26.2/.gradle/
+
+# Output dist folder (built jars are attached in GitHub Releases)
+dist/
+
+# Compiled Jars
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# Fabric Loom
+.loom/
+run/
+run-server/
+cache/
+
+# IDE / Editors
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
