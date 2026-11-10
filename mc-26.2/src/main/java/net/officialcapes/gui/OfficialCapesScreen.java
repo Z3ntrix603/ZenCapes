@@ -6,7 +6,10 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.sounds.SoundEvents;
 import net.officialcapes.cape.CapeCategory;
 import net.officialcapes.cape.CapeDefinition;
 import net.officialcapes.cape.CapeRegistry;
@@ -14,267 +17,550 @@ import net.officialcapes.config.OfficialCapesConfig;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class OfficialCapesScreen extends Screen {
-    private final Screen parent;
-    private CapeCategory currentCategory = CapeCategory.ALL;
-    private EditBox searchBox;
-    private List<CapeDefinition> visibleCapes = new ArrayList<>();
-    private int scrollOffset = 0;
-    private CapeDefinition selectedCape;
 
-    private Button toggleVisibilityButton;
-    private Button togglePhysicsButton;
+    private static final int WIN_WIDTH = 384;
+    private static final int WIN_HEIGHT = 224;
+    private static final int SIDEBAR_WIDTH = 110;
+    private static final int HEADER_HEIGHT = 24;
+
+    private static final int GRID_COLS = 4;
+    private static final int GRID_ROWS = 3;
+    private static final int SLOTS_PER_PAGE = GRID_COLS * GRID_ROWS; // 12
+    private static final int SLOT_W = 34;
+    private static final int SLOT_H = 40;
+    private static final int SLOT_SPACING = 3;
+
+    // Modern Obsidian Dark UI Colors
+    private static final int COLOR_BACKDROP = 0x85000000;
+    private static final int COLOR_WIN_BG = 0xF4090E18;
+    private static final int COLOR_WIN_HEADER = 0xFF0B1220;
+    private static final int COLOR_WIN_BORDER = 0xFF1E293B;
+
+    private static final int COLOR_SIDEBAR_BG = 0xFF080D16;
+    private static final int COLOR_SIDEBAR_ITEM = 0xFF0F172A;
+    private static final int COLOR_SIDEBAR_SELECTED = 0xFF1E293B;
+    private static final int COLOR_CYAN = 0xFF00E5FF;
+    private static final int COLOR_ACCENT = 0xFF38BDF8;
+
+    private static final int COLOR_SLOT_BG = 0xFF0D1424;
+    private static final int COLOR_SLOT_BORDER = 0xFF1C2840;
+    private static final int COLOR_SLOT_HOVER = 0xFF2563EB;
+    private static final int COLOR_SLOT_SELECTED = 0xFFFFFFFF;
+    private static final int COLOR_TEXT_WHITE = 0xFFFFFFFF;
+    private static final int COLOR_TEXT_GRAY = 0xFF94A3B8;
+    private static final int COLOR_SUCCESS = 0xFF4ADE80;
+
+    public enum Tab {
+        ALL("Alle (36)", CapeCategory.ALL),
+        MINECON("Minecon (6)", CapeCategory.MINECON),
+        STAFF("Mitarbeiter (4)", CapeCategory.STAFF),
+        EVENTS("Events (9)", CapeCategory.EVENTS),
+        COMMUNITY("Community (8)", CapeCategory.COMMUNITY),
+        SPECIAL("Spezial (9)", CapeCategory.SPECIAL),
+        PHYSICS("Physik Setup", null);
+
+        final String displayName;
+        final CapeCategory category;
+
+        Tab(String displayName, CapeCategory category) {
+            this.displayName = displayName;
+            this.category = category;
+        }
+    }
+
+    private final Screen parent;
+    protected Tab activeTab = Tab.ALL;
+    private int currentPage = 0;
+    private String statusMessage = "Gespeichert. Cape ausgerüstet.";
+    private EditBox searchBox;
+    private String searchQuery = "";
+    private CapeDefinition selectedCape;
+    private CapeDefinition hoveredCape = null;
+    private final List<CapeDefinition> filteredCapes = new ArrayList<>();
 
     public OfficialCapesScreen(Screen parent) {
-        super(Component.literal("Offizielle Capes"));
+        super(Component.literal("ZenCapes"));
         this.parent = parent;
+    }
+
+    public void setActiveTab(Tab tab) {
+        this.activeTab = tab;
     }
 
     @Override
     protected void init() {
         super.init();
-
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
-        selectedCape = CapeRegistry.get(config.selectedCapeId);
         if (selectedCape == null) {
-            selectedCape = CapeRegistry.getDefaultCape();
+            selectedCape = CapeRegistry.get(config.selectedCapeId);
+            if (selectedCape == null) {
+                selectedCape = CapeRegistry.getDefaultCape();
+            }
         }
-
-        CapeCategory[] categories = CapeCategory.values();
-        int tabWidth = Math.min(65, (this.width - 20) / categories.length);
-        int tabStartX = (this.width - (tabWidth * categories.length)) / 2;
-        int tabY = 28;
-
-        for (int i = 0; i < categories.length; i++) {
-            CapeCategory cat = categories[i];
-            int x = tabStartX + i * tabWidth;
-            Button btn = Button.builder(Component.literal(cat.getDisplayName()), b -> {
-                this.currentCategory = cat;
-                this.scrollOffset = 0;
-                updateFilteredCapes();
-            }).bounds(x, tabY, tabWidth - 2, 18).build();
-            this.addRenderableWidget(btn);
-        }
-
-        int searchWidth = 140;
-        int searchX = 16;
-        int searchY = 52;
-        searchBox = new EditBox(this.font, searchX, searchY, searchWidth, 16, Component.literal("Suche..."));
-        searchBox.setResponder(s -> {
-            this.scrollOffset = 0;
-            updateFilteredCapes();
-        });
-        this.addRenderableWidget(searchBox);
-
-        int bottomY = this.height - 28;
-        int btnWidth = 100;
-        int spacing = 6;
-        int totalWidth = btnWidth * 4 + spacing * 3;
-        int startX = (this.width - totalWidth) / 2;
-
-        toggleVisibilityButton = Button.builder(getVisibilityText(), b -> {
-            config.toggleCape();
-            b.setMessage(getVisibilityText());
-        }).bounds(startX, bottomY, btnWidth, 20).build();
-        this.addRenderableWidget(toggleVisibilityButton);
-
-        togglePhysicsButton = Button.builder(getPhysicsText(), b -> {
-            config.physicsEnabled = !config.physicsEnabled;
-            config.save();
-            b.setMessage(getPhysicsText());
-        }).bounds(startX + (btnWidth + spacing), bottomY, btnWidth, 20).build();
-        this.addRenderableWidget(togglePhysicsButton);
-
-        Button settingsBtn = Button.builder(Component.literal("Physik Setup..."), b -> {
-            Minecraft.getInstance().setScreenAndShow(new CapePhysicsSettingsScreen(this));
-        }).bounds(startX + (btnWidth + spacing) * 2, bottomY, btnWidth, 20).build();
-        this.addRenderableWidget(settingsBtn);
-
-        Button doneBtn = Button.builder(Component.literal("Fertig"), b -> {
-            this.onClose();
-        }).bounds(startX + (btnWidth + spacing) * 3, bottomY, btnWidth, 20).build();
-        this.addRenderableWidget(doneBtn);
-
-        updateFilteredCapes();
-    }
-
-    private Component getVisibilityText() {
-        boolean enabled = OfficialCapesConfig.getInstance().enabled;
-        return Component.literal(enabled ? "§aCape: AN" : "§cCape: AUS");
-    }
-
-    private Component getPhysicsText() {
-        boolean phys = OfficialCapesConfig.getInstance().physicsEnabled;
-        return Component.literal(phys ? "§aPhysik: AN" : "§7Physik: AUS");
+        rebuildUI();
     }
 
     private void updateFilteredCapes() {
-        visibleCapes.clear();
-        String query = searchBox != null ? searchBox.getValue().toLowerCase().trim() : "";
-        List<CapeDefinition> source = CapeRegistry.getByCategory(currentCategory);
+        filteredCapes.clear();
+        if (activeTab.category == null) return;
 
-        for (CapeDefinition cape : source) {
-            if (query.isEmpty() || cape.getName().toLowerCase().contains(query) || cape.getDescription().toLowerCase().contains(query)) {
-                visibleCapes.add(cape);
+        List<CapeDefinition> source = CapeRegistry.getByCategory(activeTab.category);
+        String q = searchQuery.toLowerCase().trim();
+        for (CapeDefinition c : source) {
+            if (q.isEmpty() || c.getName().toLowerCase().contains(q) || c.getDescription().toLowerCase().contains(q)) {
+                filteredCapes.add(c);
             }
         }
     }
 
-    @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
-        int listHeight = visibleCapes.size() * 32;
-        int viewHeight = this.height - 110;
-        int maxScroll = Math.max(0, listHeight - viewHeight);
+    private void rebuildUI() {
+        String lastSearch = searchBox != null ? searchBox.getValue() : searchQuery;
+        this.clearWidgets();
 
-        scrollOffset = (int) Math.max(0, Math.min(maxScroll, scrollOffset - verticalAmount * 24));
-        return true;
+        int winX = (this.width - WIN_WIDTH) / 2;
+        int winY = (this.height - WIN_HEIGHT) / 2;
+
+        // Close button '✕'
+        this.addRenderableWidget(Button.builder(Component.literal("✕"), b -> onClose())
+                .bounds(winX + WIN_WIDTH - 18, winY + 4, 14, 14).build());
+
+        int contentX = winX + SIDEBAR_WIDTH + 10;
+        int contentY = winY + HEADER_HEIGHT + 4;
+
+        if (activeTab == Tab.PHYSICS) {
+            buildPhysicsUI(winX, winY, contentX, contentY);
+        } else {
+            buildCapesUI(winX, winY, contentX, contentY, lastSearch);
+        }
     }
 
-    @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean bl) {
-        if (super.mouseClicked(event, bl)) {
-            return true;
-        }
+    private void buildCapesUI(int winX, int winY, int contentX, int contentY, String lastSearch) {
+        OfficialCapesConfig config = OfficialCapesConfig.getInstance();
 
-        double mouseX = event.x();
-        double mouseY = event.y();
-        int listX = 16;
-        int listY = 74;
-        int listWidth = this.width - 190;
-        int listBottom = this.height - 36;
+        // Search field
+        searchBox = new EditBox(this.font, contentX, contentY + 1, 80, 14, Component.literal("Suche"));
+        searchBox.setHint(Component.literal("§7Suche..."));
+        searchBox.setValue(lastSearch);
+        searchBox.setResponder(text -> {
+            this.searchQuery = text;
+            this.currentPage = 0;
+            updateFilteredCapes();
+        });
+        this.addRenderableWidget(searchBox);
+        this.searchQuery = lastSearch;
+        updateFilteredCapes();
 
-        if (mouseX >= listX && mouseX <= listX + listWidth && mouseY >= listY && mouseY <= listBottom) {
-            int relativeY = (int) mouseY - listY + scrollOffset;
-            int index = relativeY / 32;
-            if (index >= 0 && index < visibleCapes.size()) {
-                CapeDefinition clicked = visibleCapes.get(index);
-                this.selectedCape = clicked;
-                OfficialCapesConfig.getInstance().selectCape(clicked.getId());
-                return true;
+        // Cape toggle button
+        String capeToggleText = "Cape: " + (config.enabled ? "§a[AN]" : "§c[AUS]");
+        this.addRenderableWidget(Button.builder(Component.literal(capeToggleText), b -> {
+            config.toggleCape();
+            statusMessage = config.enabled ? "Cape aktiviert!" : "Cape ausgeblendet.";
+            rebuildUI();
+        }).bounds(contentX + 84, contentY + 1, 62, 14).build());
+
+        // Physics toggle button
+        String physToggleText = "Physik: " + (config.physicsEnabled ? "§a[AN]" : "§7[AUS]");
+        this.addRenderableWidget(Button.builder(Component.literal(physToggleText), b -> {
+            config.physicsEnabled = !config.physicsEnabled;
+            config.save();
+            statusMessage = config.physicsEnabled ? "Cloth-Physik aktiv!" : "Physik deaktiviert.";
+            rebuildUI();
+        }).bounds(contentX + 148, contentY + 1, 68, 14).build());
+
+        // Pagination buttons
+        int totalPages = Math.max(1, (filteredCapes.size() + SLOTS_PER_PAGE - 1) / SLOTS_PER_PAGE);
+        if (currentPage >= totalPages) currentPage = totalPages - 1;
+        if (currentPage < 0) currentPage = 0;
+
+        int rightAlign = winX + WIN_WIDTH - 8;
+        this.addRenderableWidget(Button.builder(Component.literal("<"), b -> {
+            if (currentPage > 0) {
+                currentPage--;
+                rebuildUI();
             }
+        }).bounds(rightAlign - 24, contentY + 1, 11, 14).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal(">"), b -> {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                rebuildUI();
+            }
+        }).bounds(rightAlign - 12, contentY + 1, 11, 14).build());
+
+        // Equip / Action Button in Inspector Card
+        if (selectedCape != null) {
+            int cardX = contentX + 150;
+            int cardY = contentY + 19;
+            int cardW = 98;
+            int cardH = 128;
+            boolean isEquipped = selectedCape.getId().equals(config.selectedCapeId);
+            Component btnText = Component.literal(isEquipped ? "§a✓ Ausgerüstet" : "§bAusrüsten");
+
+            this.addRenderableWidget(Button.builder(btnText, b -> {
+                config.selectCape(selectedCape.getId());
+                config.enabled = true;
+                statusMessage = "Gespeichert. " + selectedCape.getName() + " ausgerüstet!";
+                rebuildUI();
+            }).bounds(cardX + 8, cardY + cardH - 17, cardW - 16, 14).build());
         }
-        return false;
+    }
+
+    private void buildPhysicsUI(int winX, int winY, int contentX, int contentY) {
+        OfficialCapesConfig config = OfficialCapesConfig.getInstance();
+
+        // Main physics toggle
+        String toggleText = "Physik-Simulation: " + (config.physicsEnabled ? "§a[AKTIV]" : "§c[AUS]");
+        this.addRenderableWidget(Button.builder(Component.literal(toggleText), b -> {
+            config.physicsEnabled = !config.physicsEnabled;
+            config.save();
+            statusMessage = config.physicsEnabled ? "Physik eingeschaltet!" : "Physik ausgeschaltet.";
+            rebuildUI();
+        }).bounds(contentX, contentY + 16, 160, 16).build());
+
+        // Wind strength stepper
+        this.addRenderableWidget(Button.builder(Component.literal("§c-"), b -> {
+            config.windStrength = Math.max(0.2f, (float) (Math.round((config.windStrength - 0.2f) * 10.0) / 10.0));
+            config.save();
+            statusMessage = String.format(Locale.ROOT, "Windstärke: %.1fx", config.windStrength);
+            rebuildUI();
+        }).bounds(contentX + 118, contentY + 38, 18, 14).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("§a+"), b -> {
+            config.windStrength = Math.min(2.5f, (float) (Math.round((config.windStrength + 0.2f) * 10.0) / 10.0));
+            config.save();
+            statusMessage = String.format(Locale.ROOT, "Windstärke: %.1fx", config.windStrength);
+            rebuildUI();
+        }).bounds(contentX + 140, contentY + 38, 18, 14).build());
+
+        // Gravity stepper
+        this.addRenderableWidget(Button.builder(Component.literal("§c-"), b -> {
+            config.gravity = Math.max(0.2f, (float) (Math.round((config.gravity - 0.2f) * 10.0) / 10.0));
+            config.save();
+            statusMessage = String.format(Locale.ROOT, "Schwerkraft: %.1fx", config.gravity);
+            rebuildUI();
+        }).bounds(contentX + 118, contentY + 56, 18, 14).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("§a+"), b -> {
+            config.gravity = Math.min(2.5f, (float) (Math.round((config.gravity + 0.2f) * 10.0) / 10.0));
+            config.save();
+            statusMessage = String.format(Locale.ROOT, "Schwerkraft: %.1fx", config.gravity);
+            rebuildUI();
+        }).bounds(contentX + 140, contentY + 56, 18, 14).build());
+
+        // Wave intensity stepper
+        this.addRenderableWidget(Button.builder(Component.literal("§c-"), b -> {
+            config.waveIntensity = Math.max(0.2f, (float) (Math.round((config.waveIntensity - 0.2f) * 10.0) / 10.0));
+            config.save();
+            statusMessage = String.format(Locale.ROOT, "Wellen-Dynamik: %.1fx", config.waveIntensity);
+            rebuildUI();
+        }).bounds(contentX + 118, contentY + 74, 18, 14).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("§a+"), b -> {
+            config.waveIntensity = Math.min(2.5f, (float) (Math.round((config.waveIntensity + 0.2f) * 10.0) / 10.0));
+            config.save();
+            statusMessage = String.format(Locale.ROOT, "Wellen-Dynamik: %.1fx", config.waveIntensity);
+            rebuildUI();
+        }).bounds(contentX + 140, contentY + 74, 18, 14).build());
+
+        // Idle breeze toggle
+        String breezeText = "Leichte Brise: " + (config.idleBreeze ? "§a[AN]" : "§cAUS");
+        this.addRenderableWidget(Button.builder(Component.literal(breezeText), b -> {
+            config.idleBreeze = !config.idleBreeze;
+            config.save();
+            statusMessage = config.idleBreeze ? "Breeze-Effekt aktiv." : "Breeze deaktiviert.";
+            rebuildUI();
+        }).bounds(contentX, contentY + 94, 160, 16).build());
+
+        // Reset button
+        this.addRenderableWidget(Button.builder(Component.literal("↺ Standard wiederherstellen"), b -> {
+            config.windStrength = 1.0f;
+            config.gravity = 1.0f;
+            config.waveIntensity = 1.0f;
+            config.idleBreeze = true;
+            config.save();
+            statusMessage = "Standardwerte wiederhergestellt.";
+            rebuildUI();
+        }).bounds(contentX, contentY + 116, 160, 16).build());
     }
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta) {
+        // Dark backdrop
+        extractor.fill(0, 0, this.width, this.height, COLOR_BACKDROP);
+
+        int winX = (this.width - WIN_WIDTH) / 2;
+        int winY = (this.height - WIN_HEIGHT) / 2;
+
+        // Rounded outer window frame
+        drawRoundedBox(extractor, winX, winY, WIN_WIDTH, WIN_HEIGHT, COLOR_WIN_BG, COLOR_WIN_BORDER);
+
+        // Header Background
+        extractor.fill(winX + 2, winY + 2, winX + WIN_WIDTH - 2, winY + HEADER_HEIGHT, COLOR_WIN_HEADER);
+        extractor.fill(winX + 2, winY + HEADER_HEIGHT, winX + WIN_WIDTH - 2, winY + HEADER_HEIGHT + 1, COLOR_WIN_BORDER);
+
+        // Header Title
+        extractor.text(this.font, Component.literal("ZenCapes"), winX + 10, winY + 7, COLOR_TEXT_WHITE, true);
+
+        // Sidebar Background
+        int sidebarY = winY + HEADER_HEIGHT + 1;
+        extractor.fill(winX + 2, sidebarY, winX + SIDEBAR_WIDTH, winY + WIN_HEIGHT - 2, COLOR_SIDEBAR_BG);
+        extractor.fill(winX + SIDEBAR_WIDTH, sidebarY, winX + SIDEBAR_WIDTH + 1, winY + WIN_HEIGHT - 2, COLOR_WIN_BORDER);
+
+        // Sidebar Category Tabs
+        Tab[] tabs = Tab.values();
+        int tabH = 20;
+        int tabSpacing = 4;
+        for (int i = 0; i < tabs.length; i++) {
+            Tab t = tabs[i];
+            int ty = sidebarY + 4 + i * (tabH + tabSpacing);
+            boolean isSel = (t == activeTab);
+            boolean isHov = mouseX >= winX + 4 && mouseX < winX + SIDEBAR_WIDTH - 4 && mouseY >= ty && mouseY < ty + tabH;
+
+            int bg = isSel ? COLOR_SIDEBAR_SELECTED : (isHov ? COLOR_SIDEBAR_ITEM : COLOR_SIDEBAR_BG);
+            drawRoundedBox(extractor, winX + 4, ty, SIDEBAR_WIDTH - 8, tabH, bg, isSel ? COLOR_ACCENT : COLOR_WIN_BORDER);
+
+            int textColor = isSel ? COLOR_TEXT_WHITE : (isHov ? COLOR_CYAN : COLOR_TEXT_GRAY);
+            extractor.text(this.font, Component.literal(t.displayName), winX + 8, ty + 6, textColor, isSel);
+        }
+
+        int contentX = winX + SIDEBAR_WIDTH + 10;
+        int contentY = winY + HEADER_HEIGHT + 4;
+
+        if (activeTab == Tab.PHYSICS) {
+            renderPhysicsContent(extractor, contentX, contentY);
+        } else {
+            renderCapesContent(extractor, mouseX, mouseY, winX, winY, contentX, contentY);
+        }
+
+        // Status message
+        extractor.text(this.font, Component.literal(statusMessage), contentX, winY + WIN_HEIGHT - 14, COLOR_SUCCESS, true);
+
+        // Hotkey hint
+        extractor.text(this.font, Component.literal("§7[C] Menü | [V] Cape"), winX + WIN_WIDTH - 110, winY + WIN_HEIGHT - 14, COLOR_TEXT_GRAY, false);
+
         super.extractRenderState(extractor, mouseX, mouseY, delta);
 
-        extractor.centeredText(this.font, Component.literal("§l§6Offizielle Capes & Physik"), this.width / 2, 10, 0xFFFFFF);
+        // Tooltip rendered above widgets
+        if (hoveredCape != null && activeTab != Tab.PHYSICS) {
+            String tip = hoveredCape.getName() + " §7[" + hoveredCape.getCategory().getDisplayName() + "]";
+            int tw = this.font.width(tip) + 8;
+            int tx = Math.min(mouseX + 8, this.width - tw - 4);
+            int ty = mouseY - 14;
+            drawRoundedBox(extractor, tx - 2, ty - 2, tw + 4, 15, 0xF2090E18, COLOR_CYAN);
+            extractor.text(this.font, Component.literal(tip), tx + 2, ty + 2, COLOR_TEXT_WHITE, true);
+        }
+    }
 
-        int listX = 16;
-        int listY = 74;
-        int listWidth = this.width - 190;
-        int listHeight = this.height - 112;
-
-        extractor.fill(listX - 2, listY - 2, listX + listWidth + 2, listY + listHeight + 2, 0x90000000);
-        extractor.outline(listX - 2, listY - 2, listWidth + 4, listHeight + 4, 0xFF555555);
-
-        extractor.enableScissor(listX, listY, listX + listWidth, listY + listHeight);
-
+    private void renderCapesContent(GuiGraphicsExtractor extractor, int mouseX, int mouseY, int winX, int winY, int contentX, int contentY) {
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
-        String activeCapeId = config.selectedCapeId;
+        int totalPages = Math.max(1, (filteredCapes.size() + SLOTS_PER_PAGE - 1) / SLOTS_PER_PAGE);
+        String pageStr = (currentPage + 1) + " / " + totalPages;
+        int pStrWidth = this.font.width(pageStr);
+        int rightAlign = winX + WIN_WIDTH - 8;
+        extractor.text(this.font, Component.literal(pageStr), rightAlign - 28 - pStrWidth, contentY + 4, COLOR_TEXT_GRAY, true);
 
-        for (int i = 0; i < visibleCapes.size(); i++) {
-            CapeDefinition cape = visibleCapes.get(i);
-            int itemY = listY + i * 32 - scrollOffset;
+        int gridStartY = contentY + 19;
+        int startIndex = currentPage * SLOTS_PER_PAGE;
+        int endIndex = Math.min(filteredCapes.size(), startIndex + SLOTS_PER_PAGE);
 
-            if (itemY + 30 < listY || itemY > listY + listHeight) {
-                continue;
-            }
+        hoveredCape = null;
 
-            boolean isHovered = mouseX >= listX && mouseX <= listX + listWidth && mouseY >= itemY && mouseY <= itemY + 30;
-            boolean isEquipped = cape.getId().equals(activeCapeId);
-            boolean isSelected = cape == selectedCape;
+        for (int i = startIndex; i < endIndex; i++) {
+            CapeDefinition cape = filteredCapes.get(i);
+            int slotIdx = i - startIndex;
+            int col = slotIdx % GRID_COLS;
+            int row = slotIdx / GRID_COLS;
 
-            int rowBg = isSelected ? 0x604A6572 : (isHovered ? 0x40FFFFFF : 0x20000000);
-            extractor.fill(listX, itemY, listX + listWidth, itemY + 30, rowBg);
-            if (isSelected) {
-                extractor.outline(listX, itemY, listWidth, 30, 0xFF00AAFF);
-            }
+            int sx = contentX + col * (SLOT_W + SLOT_SPACING);
+            int sy = gridStartY + row * (SLOT_H + SLOT_SPACING);
 
-            int iconX = listX + 4;
-            int iconY = itemY + 3;
-            extractor.fill(iconX - 1, iconY - 1, iconX + 16, iconY + 25, 0xFF000000);
-            extractor.blit(cape.getTexture(), iconX, iconY, iconX + 15, iconY + 24, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
+            boolean isHov = mouseX >= sx && mouseX < sx + SLOT_W && mouseY >= sy && mouseY < sy + SLOT_H;
+            boolean isEquipped = cape.getId().equals(config.selectedCapeId);
+            boolean isSelected = (cape == selectedCape);
 
-            String badge = getBadgeColor(cape.getCategory()) + "[" + cape.getCategory().getDisplayName() + "]";
-            extractor.text(this.font, Component.literal("§f§l" + cape.getName() + " " + badge), listX + 24, itemY + 5, 0xFFFFFF, true);
+            if (isHov) hoveredCape = cape;
 
-            String desc = cape.getDescription();
-            if (desc.length() > 52) desc = desc.substring(0, 49) + "...";
-            extractor.text(this.font, Component.literal("§7" + desc), listX + 24, itemY + 17, 0xAAAAAA, false);
+            int borderColor = isEquipped ? COLOR_SLOT_SELECTED : (isSelected ? COLOR_CYAN : (isHov ? COLOR_SLOT_HOVER : COLOR_SLOT_BORDER));
+            drawRoundedBox(extractor, sx, sy, SLOT_W, SLOT_H, COLOR_SLOT_BG, borderColor);
 
             if (isEquipped) {
-                extractor.text(this.font, Component.literal("§a§l✓ AUSGERÜSTET"), listX + listWidth - 96, itemY + 10, 0x55FF55, true);
+                // Double border
+                extractor.fill(sx + 2, sy + 2, sx + SLOT_W - 2, sy + 3, COLOR_SLOT_SELECTED);
+                extractor.fill(sx + 2, sy + SLOT_H - 3, sx + SLOT_W - 2, sy + SLOT_H - 2, COLOR_SLOT_SELECTED);
+                extractor.fill(sx + 2, sy + 3, sx + 3, sy + SLOT_H - 3, COLOR_SLOT_SELECTED);
+                extractor.fill(sx + SLOT_W - 3, sy + 3, sx + SLOT_W - 2, sy + SLOT_H - 3, COLOR_SLOT_SELECTED);
+            }
+
+            // Mini cape preview (16x26)
+            int mx = sx + (SLOT_W - 16) / 2;
+            int my = sy + (SLOT_H - 26) / 2;
+            extractor.blit(cape.getTexture(), mx, my, mx + 16, my + 26, 1.0f / 64.0f, 11.0f / 64.0f, 1.0f / 32.0f, 17.0f / 32.0f);
+
+            if (isEquipped) {
+                extractor.text(this.font, Component.literal("✓"), sx + SLOT_W - 8, sy + 2, COLOR_SUCCESS, true);
             }
         }
 
-        extractor.disableScissor();
-
-        int detailX = this.width - 165;
-        int detailY = 74;
-        int detailWidth = 150;
-        int detailHeight = listHeight;
-
-        extractor.fill(detailX, detailY, detailX + detailWidth, detailY + detailHeight, 0x90000000);
-        extractor.outline(detailX, detailY, detailWidth, detailHeight, 0xFF555555);
+        // Right Preview Inspector Card
+        int cardX = contentX + 150;
+        int cardY = contentY + 19;
+        int cardW = 98;
+        int cardH = 128;
+        drawRoundedBox(extractor, cardX, cardY, cardW, cardH, COLOR_SLOT_BG, COLOR_WIN_BORDER);
+        extractor.fill(cardX + 1, cardY + 1, cardX + cardW - 1, cardY + 14, COLOR_WIN_HEADER);
+        extractor.fill(cardX + 1, cardY + 14, cardX + cardW - 1, cardY + 15, COLOR_WIN_BORDER);
+        extractor.text(this.font, Component.literal("CAPE PREVIEW"), cardX + 8, cardY + 4, COLOR_ACCENT, true);
 
         if (selectedCape != null) {
-            extractor.centeredText(this.font, Component.literal("§e§l" + selectedCape.getName()), detailX + detailWidth / 2, detailY + 10, 0xFFFFFF);
+            int bigW = 32;
+            int bigH = 50;
+            int bigX = cardX + (cardW - bigW) / 2;
+            int bigY = cardY + 20;
 
-            int bigW = 48;
-            int bigH = 76;
-            int bigX = detailX + (detailWidth - bigW) / 2;
-            int bigY = detailY + 26;
+            drawRoundedBox(extractor, bigX - 2, bigY - 2, bigW + 4, bigH + 4, 0xFF050810, COLOR_WIN_BORDER);
+            extractor.blit(selectedCape.getTexture(), bigX, bigY, bigX + bigW, bigY + bigH, 1.0f / 64.0f, 11.0f / 64.0f, 1.0f / 32.0f, 17.0f / 32.0f);
 
-            extractor.fill(bigX - 2, bigY - 2, bigX + bigW + 2, bigY + bigH + 2, 0xFF111111);
-            extractor.outline(bigX - 2, bigY - 2, bigW + 4, bigH + 4, 0xFF777777);
-            extractor.blit(selectedCape.getTexture(), bigX, bigY, bigX + bigW, bigY + bigH, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
+            String name = truncate(selectedCape.getName(), cardW - 14);
+            extractor.centeredText(this.font, Component.literal(name), cardX + cardW / 2, bigY + 54, COLOR_TEXT_WHITE);
 
-            extractor.centeredText(this.font, Component.literal("§bKategorie: §f" + selectedCape.getCategory().getDisplayName()), detailX + detailWidth / 2, bigY + bigH + 8, 0xCCCCCC);
+            String badge = "[" + selectedCape.getCategory().getDisplayName() + "]";
+            extractor.centeredText(this.font, Component.literal(badge), cardX + cardW / 2, bigY + 66, COLOR_CYAN);
+        }
+    }
 
-            int descY = bigY + bigH + 22;
-            List<String> wrapped = wrapText(selectedCape.getDescription(), 22);
-            for (String line : wrapped) {
-                if (descY + 10 < detailY + detailHeight) {
-                    extractor.centeredText(this.font, Component.literal("§7" + line), detailX + detailWidth / 2, descY, 0xAAAAAA);
-                    descY += 10;
+    private void renderPhysicsContent(GuiGraphicsExtractor extractor, int contentX, int contentY) {
+        OfficialCapesConfig config = OfficialCapesConfig.getInstance();
+
+        extractor.text(this.font, Component.literal("Cape-Physik & Tuchsimulation"), contentX, contentY + 2, COLOR_TEXT_WHITE, true);
+
+        // Labels for steppers
+        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Windstärke: %.1fx", config.windStrength)), contentX, contentY + 41, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Schwerkraft: %.1fx", config.gravity)), contentX, contentY + 59, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Wellen-Dynamik: %.1fx", config.waveIntensity)), contentX, contentY + 77, COLOR_TEXT_WHITE, false);
+
+        // Right info card
+        int cardX = contentX + 168;
+        int cardY = contentY + 16;
+        int cardW = 80;
+        int cardH = 116;
+        drawRoundedBox(extractor, cardX, cardY, cardW, cardH, COLOR_SLOT_BG, COLOR_WIN_BORDER);
+        extractor.fill(cardX + 1, cardY + 1, cardX + cardW - 1, cardY + 14, COLOR_WIN_HEADER);
+        extractor.fill(cardX + 1, cardY + 14, cardX + cardW - 1, cardY + 15, COLOR_WIN_BORDER);
+        extractor.text(this.font, Component.literal("SIMULATION"), cardX + 6, cardY + 4, COLOR_ACCENT, true);
+
+        int iy = cardY + 20;
+        extractor.text(this.font, Component.literal("§a✓ §716 Bounded"), cardX + 6, iy, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal("§a✓ §7Smooth Wind"), cardX + 6, iy + 14, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal("§a✓ §7Cloth Waves"), cardX + 6, iy + 28, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal("§a✓ §7No Clipping"), cardX + 6, iy + 42, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal("§a✓ §7Client-Side"), cardX + 6, iy + 56, COLOR_TEXT_WHITE, false);
+    }
+
+    private String truncate(String text, int maxWidth) {
+        if (this.font.width(text) <= maxWidth) return text;
+        while (!text.isEmpty() && this.font.width(text + "..") > maxWidth) {
+            text = text.substring(0, text.length() - 1);
+        }
+        return text + "..";
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+        if (activeTab != Tab.PHYSICS) {
+            int totalPages = Math.max(1, (filteredCapes.size() + SLOTS_PER_PAGE - 1) / SLOTS_PER_PAGE);
+            if (verticalAmount > 0 && currentPage > 0) {
+                currentPage--;
+                rebuildUI();
+                return true;
+            } else if (verticalAmount < 0 && currentPage < totalPages - 1) {
+                currentPage++;
+                rebuildUI();
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+    }
+
+    @Override
+    public boolean mouseClicked(MouseButtonEvent event, boolean isDouble) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+
+        int winX = (this.width - WIN_WIDTH) / 2;
+        int winY = (this.height - WIN_HEIGHT) / 2;
+
+        // Sidebar click
+        int sidebarY = winY + HEADER_HEIGHT + 1;
+        if (mouseX >= winX + 4 && mouseX < winX + SIDEBAR_WIDTH - 4) {
+            Tab[] tabs = Tab.values();
+            int tabH = 20;
+            int tabSpacing = 4;
+            for (int i = 0; i < tabs.length; i++) {
+                int ty = sidebarY + 4 + i * (tabH + tabSpacing);
+                if (mouseY >= ty && mouseY < ty + tabH) {
+                    if (activeTab != tabs[i]) {
+                        activeTab = tabs[i];
+                        currentPage = 0;
+                        if (activeTab.category != null) {
+                            updateFilteredCapes();
+                        }
+                        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                        rebuildUI();
+                    }
+                    return true;
                 }
             }
         }
-    }
 
-    private String getBadgeColor(CapeCategory cat) {
-        return switch (cat) {
-            case MINECON -> "§c";
-            case STAFF -> "§4";
-            case EVENTS -> "§d";
-            case COMMUNITY -> "§b";
-            case SPECIAL -> "§6";
-            default -> "§7";
-        };
-    }
+        // Cape grid slot click
+        if (activeTab != Tab.PHYSICS) {
+            int contentX = winX + SIDEBAR_WIDTH + 10;
+            int contentY = winY + HEADER_HEIGHT + 4;
+            int gridStartY = contentY + 19;
+            int startIndex = currentPage * SLOTS_PER_PAGE;
+            int endIndex = Math.min(filteredCapes.size(), startIndex + SLOTS_PER_PAGE);
 
-    private List<String> wrapText(String text, int maxChars) {
-        List<String> result = new ArrayList<>();
-        String[] words = text.split(" ");
-        StringBuilder current = new StringBuilder();
+            for (int i = startIndex; i < endIndex; i++) {
+                int slotIdx = i - startIndex;
+                int col = slotIdx % GRID_COLS;
+                int row = slotIdx / GRID_COLS;
 
-        for (String word : words) {
-            if (current.length() + word.length() + 1 > maxChars) {
-                result.add(current.toString());
-                current = new StringBuilder(word);
-            } else {
-                if (!current.isEmpty()) current.append(" ");
-                current.append(word);
+                int sx = contentX + col * (SLOT_W + SLOT_SPACING);
+                int sy = gridStartY + row * (SLOT_H + SLOT_SPACING);
+
+                if (mouseX >= sx && mouseX < sx + SLOT_W && mouseY >= sy && mouseY < sy + SLOT_H) {
+                    CapeDefinition cape = filteredCapes.get(i);
+                    selectedCape = cape;
+                    OfficialCapesConfig.getInstance().selectCape(cape.getId());
+                    OfficialCapesConfig.getInstance().enabled = true;
+                    statusMessage = "Gespeichert. " + cape.getName() + " ausgerüstet!";
+                    Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+                    rebuildUI();
+                    return true;
+                }
             }
         }
-        if (!current.isEmpty()) {
-            result.add(current.toString());
-        }
-        return result;
+
+        return super.mouseClicked(event, isDouble);
+    }
+
+    private void drawRoundedBox(GuiGraphicsExtractor extractor, int x, int y, int w, int h, int bg, int border) {
+        extractor.fill(x + 1, y, x + w - 1, y + h, bg);
+        extractor.fill(x, y + 1, x + 1, y + h - 1, bg);
+        extractor.fill(x + w - 1, y + 1, x + w, y + h - 1, bg);
+
+        extractor.fill(x + 1, y, x + w - 1, y + 1, border);
+        extractor.fill(x + 1, y + h - 1, x + w - 1, y + h, border);
+        extractor.fill(x, y + 1, x + 1, y + h - 1, border);
+        extractor.fill(x + w - 1, y + 1, x + w, y + h - 1, border);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
     }
 
     @Override
