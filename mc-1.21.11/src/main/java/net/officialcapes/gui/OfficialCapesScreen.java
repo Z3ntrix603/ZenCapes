@@ -211,7 +211,7 @@ public class OfficialCapesScreen extends Screen {
             int iconX = listX + 4;
             int iconY = itemY + 3;
             context.fill(iconX - 1, iconY - 1, iconX + 16, iconY + 25, 0xFF000000);
-            context.drawTexturedQuad(cape.getTexture(), iconX, iconX + 15, iconY, iconY + 24, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
+            context.drawTexturedQuad(cape.getTexture(), iconX, iconY, iconX + 15, iconY + 24, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
 
             // Title and Category Badge
             String badge = getBadgeColor(cape.getCategory()) + "[" + cape.getCategory().getDisplayName() + "]";
@@ -250,7 +250,7 @@ public class OfficialCapesScreen extends Screen {
 
             context.fill(bigX - 2, bigY - 2, bigX + bigW + 2, bigY + bigH + 2, 0xFF111111);
             context.drawStrokedRectangle(bigX - 2, bigY - 2, bigW + 4, bigH + 4, 0xFF777777);
-            context.drawTexturedQuad(selectedCape.getTexture(), bigX, bigX + bigW, bigY, bigY + bigH, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
+            context.drawTexturedQuad(selectedCape.getTexture(), bigX, bigY, bigX + bigW, bigY + bigH, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
 
             // Category
             context.drawCenteredTextWithShadow(this.textRenderer, Text.literal("§bKategorie: §f" + selectedCape.getCategory().getDisplayName()), detailX + detailWidth / 2, bigY + bigH + 8, 0xCCCCCC);

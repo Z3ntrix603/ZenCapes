@@ -197,7 +197,7 @@ public class OfficialCapesScreen extends Screen {
             int iconX = listX + 4;
             int iconY = itemY + 3;
             extractor.fill(iconX - 1, iconY - 1, iconX + 16, iconY + 25, 0xFF000000);
-            extractor.blit(cape.getTexture(), iconX, iconX + 15, iconY, iconY + 24, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
+            extractor.blit(cape.getTexture(), iconX, iconY, iconX + 15, iconY + 24, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
 
             String badge = getBadgeColor(cape.getCategory()) + "[" + cape.getCategory().getDisplayName() + "]";
             extractor.text(this.font, Component.literal("§f§l" + cape.getName() + " " + badge), listX + 24, itemY + 5, 0xFFFFFF, true);
@@ -231,7 +231,7 @@ public class OfficialCapesScreen extends Screen {
 
             extractor.fill(bigX - 2, bigY - 2, bigX + bigW + 2, bigY + bigH + 2, 0xFF111111);
             extractor.outline(bigX - 2, bigY - 2, bigW + 4, bigH + 4, 0xFF777777);
-            extractor.blit(selectedCape.getTexture(), bigX, bigX + bigW, bigY, bigY + bigH, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
+            extractor.blit(selectedCape.getTexture(), bigX, bigY, bigX + bigW, bigY + bigH, 1.0f/64.0f, 11.0f/64.0f, 1.0f/32.0f, 17.0f/32.0f);
 
             extractor.centeredText(this.font, Component.literal("§bKategorie: §f" + selectedCape.getCategory().getDisplayName()), detailX + detailWidth / 2, bigY + bigH + 8, 0xCCCCCC);
 
