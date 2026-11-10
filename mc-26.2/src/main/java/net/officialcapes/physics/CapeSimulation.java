@@ -1,138 +1,85 @@
 package net.officialcapes.physics;
 
-import net.minecraft.client.player.AbstractClientPlayer;
-import net.minecraft.util.Mth;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.officialcapes.config.OfficialCapesConfig;
 import org.joml.Vector3f;
 
 public class CapeSimulation {
     public static final int NUM_SEGMENTS = 16;
-    private static final float TOTAL_LENGTH = 0.96f;
-    private static final float SEGMENT_LENGTH = TOTAL_LENGTH / (NUM_SEGMENTS - 1);
+    private static final float SEGMENT_LENGTH = 0.96f / (NUM_SEGMENTS - 1);
 
     private final CapePoint[] points = new CapePoint[NUM_SEGMENTS];
-    private float prevBodyYaw = 0.0f;
-    private int tickCount = 0;
 
     public CapeSimulation() {
         for (int i = 0; i < NUM_SEGMENTS; i++) {
-            points[i] = new CapePoint(0.0f, -i * SEGMENT_LENGTH, 0.0f);
+            points[i] = new CapePoint(0.0f, i * SEGMENT_LENGTH, 0.0f);
         }
     }
 
-    public void update(AbstractClientPlayer player, OfficialCapesConfig config) {
-        tickCount++;
+    public void updateFromState(AvatarRenderState state, OfficialCapesConfig config) {
+        float flap = state.capeFlap;
+        float lean = state.capeLean;
+        float roll = state.capeLean2;
+        boolean isGliding = state.isFallFlying;
 
-        for (CapePoint p : points) {
-            p.updatePrev();
+        updateAngles(flap, lean, roll, isGliding, config);
+    }
+
+    public void updateAngles(float flap, float lean, float roll, boolean isGliding, OfficialCapesConfig config) {
+        float speedRatio = Math.min(1.0f, Math.max(0.0f, lean / 80.0f));
+        float basePitch = 6.0f + lean * 0.5f * config.windStrength + flap * 0.6f;
+        if (isGliding) {
+            basePitch = 82.0f;
         }
+        basePitch = Math.max(4.0f, Math.min(84.0f, basePitch));
 
-        boolean sneaking = player.isCrouching();
-        boolean swimming = player.isSwimming();
-        boolean fallFlying = player.isFallFlying();
-        boolean hasChestplate = !player.getItemBySlot(EquipmentSlot.CHEST).isEmpty();
+        float time = (float) (System.currentTimeMillis() % 10000000L) * 0.005f;
 
-        float anchorZ = hasChestplate ? 0.15f : 0.125f;
-        float anchorY = sneaking ? -0.15f : 0.0f;
         points[0].x = 0.0f;
-        points[0].y = anchorY;
-        points[0].z = anchorZ;
+        points[0].y = 0.0f;
+        points[0].z = 0.0f;
 
-        Vec3 delta = player.getDeltaMovement();
-        double dx = delta.x;
-        double dy = delta.y;
-        double dz = delta.z;
-        float speed = (float) Math.sqrt(dx * dx + dz * dz);
-
-        float bodyYaw = player.yBodyRot;
-        float yawDelta = Mth.wrapDegrees(bodyYaw - prevBodyYaw);
-        prevBodyYaw = bodyYaw;
-
-        float windFactor = config.windStrength;
-        float gravityFactor = config.gravity;
-        float waveFactor = config.waveIntensity;
-
-        float gravity = 0.045f * gravityFactor;
-        float airResistance = 0.88f;
-
-        float forwardDrag = Math.min(0.55f, speed * 2.8f) * windFactor;
-
-        float walkProgress = player.walkAnimation.position();
-        float wavePhase = walkProgress * 0.85f;
-
-        for (int i = 1; i < NUM_SEGMENTS; i++) {
-            CapePoint p = points[i];
+        for (int i = 0; i < NUM_SEGMENTS - 1; i++) {
             float progress = (float) i / (NUM_SEGMENTS - 1);
 
-            p.vy -= gravity;
-            float speedLift = forwardDrag * progress;
-            p.vz += speedLift * 0.12f;
-            p.vx += (yawDelta * 0.015f) * progress;
-
-            if (speed > 0.01f) {
-                float wave = (float) Math.sin(wavePhase - i * 0.45f) * (speed * 0.18f) * waveFactor;
-                p.vz += wave * progress;
+            // 1. Dawn / NoRisk traveling wave ripple
+            float wave = 0.0f;
+            if (speedRatio > 0.02f) {
+                float waveMotion = (float) Math.sin(time * 3.5f - i * 0.52f);
+                float amp = (0.04f + speedRatio * 0.18f) * config.waveIntensity;
+                wave = waveMotion * amp * progress;
             } else if (config.idleBreeze) {
-                float idleWave = (float) Math.sin(tickCount * 0.08f - i * 0.35f) * 0.015f * windFactor;
-                p.vz += idleWave;
+                float idleMotion = (float) Math.sin(time * 1.2f - i * 0.38f);
+                wave = idleMotion * 0.03f * config.windStrength * progress;
             }
 
-            if (fallFlying || swimming) {
-                p.vy += gravity * 0.9f;
-                p.vz += 0.08f;
-            }
+            // 2. Cloth gravity sag
+            float sag = (1.0f - speedRatio) * (0.08f * config.gravity) * (progress * progress);
 
-            p.vx *= airResistance;
-            p.vy *= airResistance;
-            p.vz *= airResistance;
+            // 3. Segment pitch
+            float segmentPitchDeg = basePitch - sag * 57.29578f + wave * 57.29578f;
+            segmentPitchDeg = Math.max(2.0f, Math.min(86.0f, segmentPitchDeg));
+            float pitchRad = (float) Math.toRadians(segmentPitchDeg);
 
-            p.x += p.vx;
-            p.y += p.vy;
-            p.z += p.vz;
-        }
+            // 4. Centrifugal roll
+            float segmentRollDeg = roll * (0.5f + progress * 0.7f);
+            float rollRad = (float) Math.toRadians(segmentRollDeg);
 
-        for (int iteration = 0; iteration < 4; iteration++) {
-            for (int i = 1; i < NUM_SEGMENTS; i++) {
-                CapePoint p1 = points[i - 1];
-                CapePoint p2 = points[i];
+            // 5. Delta vector
+            float dx = (float) -Math.sin(rollRad) * SEGMENT_LENGTH;
+            float dy = (float) (Math.cos(pitchRad) * Math.cos(rollRad)) * SEGMENT_LENGTH;
+            float dz = (float) (Math.sin(pitchRad) * Math.cos(rollRad)) * SEGMENT_LENGTH;
 
-                float diffX = p2.x - p1.x;
-                float diffY = p2.y - p1.y;
-                float diffZ = p2.z - p1.z;
-
-                float currentDist = (float) Math.sqrt(diffX * diffX + diffY * diffY + diffZ * diffZ);
-                if (currentDist > 0.0001f) {
-                    float factor = (currentDist - SEGMENT_LENGTH) / currentDist;
-
-                    p2.x -= diffX * factor * 0.95f;
-                    p2.y -= diffY * factor * 0.95f;
-                    p2.z -= diffZ * factor * 0.95f;
-                }
-
-                float minZ = hasChestplate ? 0.14f : 0.11f;
-                if (sneaking) {
-                    minZ += (float) i * 0.02f;
-                }
-                if (p2.z < minZ) {
-                    p2.z = minZ;
-                    p2.vz = 0.0f;
-                }
-            }
+            points[i + 1].x = points[i].x + dx;
+            points[i + 1].y = points[i].y + dy;
+            points[i + 1].z = points[i].z + dz;
         }
     }
 
-    public Vector3f getPoint(int index, float tickDelta) {
+    public Vector3f getPoint(int index) {
         if (index < 0 || index >= NUM_SEGMENTS) {
             return new Vector3f();
         }
-        return points[index].getLerped(tickDelta);
-    }
-
-    public void reset() {
-        for (int i = 0; i < NUM_SEGMENTS; i++) {
-            points[i] = new CapePoint(0.0f, -i * SEGMENT_LENGTH, 0.125f);
-        }
+        return new Vector3f(points[index].x, points[index].y, points[index].z);
     }
 }

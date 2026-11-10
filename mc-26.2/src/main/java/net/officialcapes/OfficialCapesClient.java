@@ -41,11 +41,6 @@ public class OfficialCapesClient implements ClientModInitializer {
                     Component.literal("§c[Official Capes] Cape deaktiviert");
                 client.player.sendOverlayMessage(msg);
             }
-
-            OfficialCapesConfig config = OfficialCapesConfig.getInstance();
-            if (config.enabled) {
-                SIMULATION.update(client.player, config);
-            }
         });
 
         System.out.println("[Official Capes] Successfully loaded 36 official capes with cloth physics on 26.2!");
