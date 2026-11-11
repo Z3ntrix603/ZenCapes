@@ -36,6 +36,7 @@ public class OfficialCapesCommand {
                         .executes(ctx -> setPhysics(ctx.getSource(), false))))
         );
 
+        // Alias /capes
         dispatcher.register(
             ClientCommands.literal("capes")
                 .executes(ctx -> openScreen())
@@ -52,8 +53,8 @@ public class OfficialCapesCommand {
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
         boolean state = config.toggleCape();
         Component msg = state ?
-            Component.literal("§a[Official Capes] Cape aktiviert.") :
-            Component.literal("§c[Official Capes] Cape deaktiviert.");
+            Component.literal("§a[ZenCapes] Cape enabled.") :
+            Component.literal("§c[ZenCapes] Cape disabled.");
         source.sendFeedback(msg);
         return 1;
     }
@@ -61,11 +62,11 @@ public class OfficialCapesCommand {
     private static int setCape(FabricClientCommandSource source, String id) {
         CapeDefinition cape = CapeRegistry.get(id);
         if (cape == null) {
-            source.sendFeedback(Component.literal("§c[Official Capes] Cape nicht gefunden: " + id));
+            source.sendFeedback(Component.literal("§c[ZenCapes] Cape not found: " + id));
             return 0;
         }
         OfficialCapesConfig.getInstance().selectCape(id);
-        source.sendFeedback(Component.literal("§a[Official Capes] Ausgerüstet: " + cape.getName()));
+        source.sendFeedback(Component.literal("§a[ZenCapes] Equipped: " + cape.getName()));
         return 1;
     }
 
@@ -74,8 +75,8 @@ public class OfficialCapesCommand {
         config.physicsEnabled = enabled;
         config.save();
         Component msg = enabled ?
-            Component.literal("§a[Official Capes] Physik aktiviert.") :
-            Component.literal("§6[Official Capes] Physik deaktiviert (Standard-Umhang).");
+            Component.literal("§a[ZenCapes] Physics enabled.") :
+            Component.literal("§6[ZenCapes] Physics disabled (vanilla cape).");
         source.sendFeedback(msg);
         return 1;
     }

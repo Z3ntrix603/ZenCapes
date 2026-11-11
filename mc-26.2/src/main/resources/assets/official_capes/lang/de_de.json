@@ -1,14 +1,16 @@
 {
-  "category.official_capes": "Offizielle Capes",
-  "key.official_capes.open_gui": "Cape-Menü öffnen",
-  "key.official_capes.toggle_cape": "Cape ein-/ausschalten",
-  "category.official_capes.all": "Alle",
+  "category.official_capes": "ZenCapes",
+  "category.official_capes.general": "ZenCapes",
+  "key.category.official_capes.general": "ZenCapes",
+  "key.official_capes.open_gui": "Open Cape Menu",
+  "key.official_capes.toggle_cape": "Toggle Cape Visibility",
+  "category.official_capes.all": "All",
   "category.official_capes.minecon": "Minecon",
-  "category.official_capes.staff": "Mitarbeiter",
+  "category.official_capes.staff": "Staff",
   "category.official_capes.events": "Events",
   "category.official_capes.community": "Community",
-  "category.official_capes.special": "Spezial",
-  "text.official_capes.title": "Offizielle Capes & Physik",
-  "text.official_capes.enabled": "Cape aktiviert",
-  "text.official_capes.disabled": "Cape deaktiviert"
+  "category.official_capes.special": "Special",
+  "text.official_capes.title": "ZenCapes - Official Capes & Physics",
+  "text.official_capes.enabled": "Cape Enabled",
+  "text.official_capes.disabled": "Cape Disabled"
 }

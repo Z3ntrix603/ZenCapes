@@ -54,13 +54,13 @@ public class OfficialCapesScreen extends Screen {
     private static final int COLOR_SUCCESS = 0xFF4ADE80;
 
     public enum Tab {
-        ALL("Alle (36)", CapeCategory.ALL),
+        ALL("All (36)", CapeCategory.ALL),
         MINECON("Minecon (6)", CapeCategory.MINECON),
-        STAFF("Mitarbeiter (4)", CapeCategory.STAFF),
+        STAFF("Staff (4)", CapeCategory.STAFF),
         EVENTS("Events (9)", CapeCategory.EVENTS),
         COMMUNITY("Community (8)", CapeCategory.COMMUNITY),
-        SPECIAL("Spezial (9)", CapeCategory.SPECIAL),
-        PHYSICS("Physik Setup", null);
+        SPECIAL("Special (9)", CapeCategory.SPECIAL),
+        PHYSICS("Physics Setup", null);
 
         final String displayName;
         final CapeCategory category;
@@ -74,7 +74,7 @@ public class OfficialCapesScreen extends Screen {
     private final Screen parent;
     protected Tab activeTab = Tab.ALL;
     private int currentPage = 0;
-    private String statusMessage = "Gespeichert. Cape ausgerüstet.";
+    private String statusMessage = "Saved. Cape equipped.";
     private EditBox searchBox;
     private String searchQuery = "";
     private CapeDefinition selectedCape;
@@ -141,8 +141,8 @@ public class OfficialCapesScreen extends Screen {
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
 
         // Search field
-        searchBox = new EditBox(this.font, contentX, contentY + 1, 80, 14, Component.literal("Suche"));
-        searchBox.setHint(Component.literal("§7Suche..."));
+        searchBox = new EditBox(this.font, contentX, contentY + 1, 80, 14, Component.literal("Search"));
+        searchBox.setHint(Component.literal("§7Search..."));
         searchBox.setValue(lastSearch);
         searchBox.setResponder(text -> {
             this.searchQuery = text;
@@ -154,19 +154,19 @@ public class OfficialCapesScreen extends Screen {
         updateFilteredCapes();
 
         // Cape toggle button
-        String capeToggleText = "Cape: " + (config.enabled ? "§a[AN]" : "§c[AUS]");
+        String capeToggleText = "Cape: " + (config.enabled ? "§a[ON]" : "§c[OFF]");
         this.addRenderableWidget(Button.builder(Component.literal(capeToggleText), b -> {
             config.toggleCape();
-            statusMessage = config.enabled ? "Cape aktiviert!" : "Cape ausgeblendet.";
+            statusMessage = config.enabled ? "Cape enabled!" : "Cape hidden.";
             rebuildUI();
         }).bounds(contentX + 84, contentY + 1, 62, 14).build());
 
         // Physics toggle button
-        String physToggleText = "Physik: " + (config.physicsEnabled ? "§a[AN]" : "§7[AUS]");
+        String physToggleText = "Physics: " + (config.physicsEnabled ? "§a[ON]" : "§7[OFF]");
         this.addRenderableWidget(Button.builder(Component.literal(physToggleText), b -> {
             config.physicsEnabled = !config.physicsEnabled;
             config.save();
-            statusMessage = config.physicsEnabled ? "Cloth-Physik aktiv!" : "Physik deaktiviert.";
+            statusMessage = config.physicsEnabled ? "Cloth physics enabled!" : "Physics disabled.";
             rebuildUI();
         }).bounds(contentX + 148, contentY + 1, 68, 14).build());
 
@@ -197,12 +197,12 @@ public class OfficialCapesScreen extends Screen {
             int cardW = 98;
             int cardH = 128;
             boolean isEquipped = selectedCape.getId().equals(config.selectedCapeId);
-            Component btnText = Component.literal(isEquipped ? "§a✓ Ausgerüstet" : "§bAusrüsten");
+            Component btnText = Component.literal(isEquipped ? "§a✓ Equipped" : "§bEquip");
 
             this.addRenderableWidget(Button.builder(btnText, b -> {
                 config.selectCape(selectedCape.getId());
                 config.enabled = true;
-                statusMessage = "Gespeichert. " + selectedCape.getName() + " ausgerüstet!";
+                statusMessage = "Saved. " + selectedCape.getName() + " equipped!";
                 rebuildUI();
             }).bounds(cardX + 8, cardY + cardH - 17, cardW - 16, 14).build());
         }
@@ -212,11 +212,11 @@ public class OfficialCapesScreen extends Screen {
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
 
         // Main physics toggle
-        String toggleText = "Physik-Simulation: " + (config.physicsEnabled ? "§a[AKTIV]" : "§c[AUS]");
+        String toggleText = "Physics Simulation: " + (config.physicsEnabled ? "§a[ON]" : "§c[OFF]");
         this.addRenderableWidget(Button.builder(Component.literal(toggleText), b -> {
             config.physicsEnabled = !config.physicsEnabled;
             config.save();
-            statusMessage = config.physicsEnabled ? "Physik eingeschaltet!" : "Physik ausgeschaltet.";
+            statusMessage = config.physicsEnabled ? "Physics simulation enabled!" : "Physics simulation disabled.";
             rebuildUI();
         }).bounds(contentX, contentY + 16, 160, 16).build());
 
@@ -224,14 +224,14 @@ public class OfficialCapesScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("§c-"), b -> {
             config.windStrength = Math.max(0.2f, (float) (Math.round((config.windStrength - 0.2f) * 10.0) / 10.0));
             config.save();
-            statusMessage = String.format(Locale.ROOT, "Windstärke: %.1fx", config.windStrength);
+            statusMessage = String.format(Locale.ROOT, "Wind Strength: %.1fx", config.windStrength);
             rebuildUI();
         }).bounds(contentX + 118, contentY + 38, 18, 14).build());
 
         this.addRenderableWidget(Button.builder(Component.literal("§a+"), b -> {
             config.windStrength = Math.min(2.5f, (float) (Math.round((config.windStrength + 0.2f) * 10.0) / 10.0));
             config.save();
-            statusMessage = String.format(Locale.ROOT, "Windstärke: %.1fx", config.windStrength);
+            statusMessage = String.format(Locale.ROOT, "Wind Strength: %.1fx", config.windStrength);
             rebuildUI();
         }).bounds(contentX + 140, contentY + 38, 18, 14).build());
 
@@ -239,14 +239,14 @@ public class OfficialCapesScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("§c-"), b -> {
             config.gravity = Math.max(0.2f, (float) (Math.round((config.gravity - 0.2f) * 10.0) / 10.0));
             config.save();
-            statusMessage = String.format(Locale.ROOT, "Schwerkraft: %.1fx", config.gravity);
+            statusMessage = String.format(Locale.ROOT, "Gravity: %.1fx", config.gravity);
             rebuildUI();
         }).bounds(contentX + 118, contentY + 56, 18, 14).build());
 
         this.addRenderableWidget(Button.builder(Component.literal("§a+"), b -> {
             config.gravity = Math.min(2.5f, (float) (Math.round((config.gravity + 0.2f) * 10.0) / 10.0));
             config.save();
-            statusMessage = String.format(Locale.ROOT, "Schwerkraft: %.1fx", config.gravity);
+            statusMessage = String.format(Locale.ROOT, "Gravity: %.1fx", config.gravity);
             rebuildUI();
         }).bounds(contentX + 140, contentY + 56, 18, 14).build());
 
@@ -254,34 +254,34 @@ public class OfficialCapesScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("§c-"), b -> {
             config.waveIntensity = Math.max(0.2f, (float) (Math.round((config.waveIntensity - 0.2f) * 10.0) / 10.0));
             config.save();
-            statusMessage = String.format(Locale.ROOT, "Wellen-Dynamik: %.1fx", config.waveIntensity);
+            statusMessage = String.format(Locale.ROOT, "Wave Dynamics: %.1fx", config.waveIntensity);
             rebuildUI();
         }).bounds(contentX + 118, contentY + 74, 18, 14).build());
 
         this.addRenderableWidget(Button.builder(Component.literal("§a+"), b -> {
             config.waveIntensity = Math.min(2.5f, (float) (Math.round((config.waveIntensity + 0.2f) * 10.0) / 10.0));
             config.save();
-            statusMessage = String.format(Locale.ROOT, "Wellen-Dynamik: %.1fx", config.waveIntensity);
+            statusMessage = String.format(Locale.ROOT, "Wave Dynamics: %.1fx", config.waveIntensity);
             rebuildUI();
         }).bounds(contentX + 140, contentY + 74, 18, 14).build());
 
         // Idle breeze toggle
-        String breezeText = "Leichte Brise: " + (config.idleBreeze ? "§a[AN]" : "§cAUS");
+        String breezeText = "Idle Breeze: " + (config.idleBreeze ? "§a[ON]" : "§c[OFF]");
         this.addRenderableWidget(Button.builder(Component.literal(breezeText), b -> {
             config.idleBreeze = !config.idleBreeze;
             config.save();
-            statusMessage = config.idleBreeze ? "Breeze-Effekt aktiv." : "Breeze deaktiviert.";
+            statusMessage = config.idleBreeze ? "Idle breeze enabled." : "Idle breeze disabled.";
             rebuildUI();
         }).bounds(contentX, contentY + 94, 160, 16).build());
 
         // Reset button
-        this.addRenderableWidget(Button.builder(Component.literal("↺ Standard wiederherstellen"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("↺ Restore Defaults"), b -> {
             config.windStrength = 1.0f;
             config.gravity = 1.0f;
             config.waveIntensity = 1.0f;
             config.idleBreeze = true;
             config.save();
-            statusMessage = "Standardwerte wiederhergestellt.";
+            statusMessage = "Default values restored.";
             rebuildUI();
         }).bounds(contentX, contentY + 116, 160, 16).build());
     }
@@ -339,7 +339,7 @@ public class OfficialCapesScreen extends Screen {
         extractor.text(this.font, Component.literal(statusMessage), contentX, winY + WIN_HEIGHT - 14, COLOR_SUCCESS, true);
 
         // Hotkey hint
-        extractor.text(this.font, Component.literal("§7[C] Menü | [V] Cape"), winX + WIN_WIDTH - 110, winY + WIN_HEIGHT - 14, COLOR_TEXT_GRAY, false);
+        extractor.text(this.font, Component.literal("§7[C] Menu | [V] Cape"), winX + WIN_WIDTH - 110, winY + WIN_HEIGHT - 14, COLOR_TEXT_GRAY, false);
 
         super.extractRenderState(extractor, mouseX, mouseY, delta);
 
@@ -434,12 +434,12 @@ public class OfficialCapesScreen extends Screen {
     private void renderPhysicsContent(GuiGraphicsExtractor extractor, int contentX, int contentY) {
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
 
-        extractor.text(this.font, Component.literal("Cape-Physik & Tuchsimulation"), contentX, contentY + 2, COLOR_TEXT_WHITE, true);
+        extractor.text(this.font, Component.literal("Cape Physics & Cloth Simulation"), contentX, contentY + 2, COLOR_TEXT_WHITE, true);
 
         // Labels for steppers
-        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Windstärke: %.1fx", config.windStrength)), contentX, contentY + 41, COLOR_TEXT_WHITE, false);
-        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Schwerkraft: %.1fx", config.gravity)), contentX, contentY + 59, COLOR_TEXT_WHITE, false);
-        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Wellen-Dynamik: %.1fx", config.waveIntensity)), contentX, contentY + 77, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Wind Strength: %.1fx", config.windStrength)), contentX, contentY + 41, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Gravity: %.1fx", config.gravity)), contentX, contentY + 59, COLOR_TEXT_WHITE, false);
+        extractor.text(this.font, Component.literal(String.format(Locale.ROOT, "Wave Dynamics: %.1fx", config.waveIntensity)), contentX, contentY + 77, COLOR_TEXT_WHITE, false);
 
         // Right info card
         int cardX = contentX + 168;
@@ -536,7 +536,7 @@ public class OfficialCapesScreen extends Screen {
                     selectedCape = cape;
                     OfficialCapesConfig.getInstance().selectCape(cape.getId());
                     OfficialCapesConfig.getInstance().enabled = true;
-                    statusMessage = "Gespeichert. " + cape.getName() + " ausgerüstet!";
+                    statusMessage = "Saved. " + cape.getName() + " equipped!";
                     Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
                     rebuildUI();
                     return true;

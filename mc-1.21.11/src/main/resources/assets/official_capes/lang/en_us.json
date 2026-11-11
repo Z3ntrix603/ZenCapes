@@ -1,5 +1,7 @@
 {
-  "category.official_capes": "Official Capes",
+  "category.official_capes": "ZenCapes",
+  "category.official_capes.general": "ZenCapes",
+  "key.category.official_capes.general": "ZenCapes",
   "key.official_capes.open_gui": "Open Cape Menu",
   "key.official_capes.toggle_cape": "Toggle Cape Visibility",
   "category.official_capes.all": "All",
@@ -8,7 +10,7 @@
   "category.official_capes.events": "Events",
   "category.official_capes.community": "Community",
   "category.official_capes.special": "Special",
-  "text.official_capes.title": "Official Capes & Physics",
+  "text.official_capes.title": "ZenCapes - Official Capes & Physics",
   "text.official_capes.enabled": "Cape Enabled",
   "text.official_capes.disabled": "Cape Disabled"
 }

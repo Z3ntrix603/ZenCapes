@@ -53,8 +53,8 @@ public class OfficialCapesCommand {
         OfficialCapesConfig config = OfficialCapesConfig.getInstance();
         boolean state = config.toggleCape();
         Text msg = state ?
-            Text.literal("§a[Official Capes] Cape aktiviert.") :
-            Text.literal("§c[Official Capes] Cape deaktiviert.");
+            Text.literal("§a[ZenCapes] Cape enabled.") :
+            Text.literal("§c[ZenCapes] Cape disabled.");
         source.sendFeedback(msg);
         return 1;
     }
@@ -62,11 +62,11 @@ public class OfficialCapesCommand {
     private static int setCape(FabricClientCommandSource source, String id) {
         CapeDefinition cape = CapeRegistry.get(id);
         if (cape == null) {
-            source.sendFeedback(Text.literal("§c[Official Capes] Cape nicht gefunden: " + id));
+            source.sendFeedback(Text.literal("§c[ZenCapes] Cape not found: " + id));
             return 0;
         }
         OfficialCapesConfig.getInstance().selectCape(id);
-        source.sendFeedback(Text.literal("§a[Official Capes] Ausgerüstet: " + cape.getName()));
+        source.sendFeedback(Text.literal("§a[ZenCapes] Equipped: " + cape.getName()));
         return 1;
     }
 
@@ -75,8 +75,8 @@ public class OfficialCapesCommand {
         config.physicsEnabled = enabled;
         config.save();
         Text msg = enabled ?
-            Text.literal("§a[Official Capes] Physik aktiviert.") :
-            Text.literal("§6[Official Capes] Physik deaktiviert (Standard-Umhang).");
+            Text.literal("§a[ZenCapes] Physics enabled.") :
+            Text.literal("§6[ZenCapes] Physics disabled (vanilla cape).");
         source.sendFeedback(msg);
         return 1;
     }

@@ -45,8 +45,8 @@ public class OfficialCapesClient implements ClientModInitializer {
                 OfficialCapesConfig config = OfficialCapesConfig.getInstance();
                 boolean state = config.toggleCape();
                 Text msg = state ?
-                    Text.literal("§a[Official Capes] Cape aktiviert") :
-                    Text.literal("§c[Official Capes] Cape deaktiviert");
+                    Text.literal("§a[ZenCapes] Cape enabled") :
+                    Text.literal("§c[ZenCapes] Cape disabled");
                 client.player.sendMessage(msg, true);
             }
         });

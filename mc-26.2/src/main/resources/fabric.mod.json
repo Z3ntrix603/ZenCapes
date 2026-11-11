@@ -2,13 +2,13 @@
   "schemaVersion": 1,
   "id": "official_capes",
   "version": "${version}",
-  "name": "Official Capes & Physics",
-  "description": "Client-seitige Minecraft Mod mit allen offiziellen Capes, Dawn/NoRisk Physik, GUI, Keybinds und Befehlen.",
+  "name": "ZenCapes",
+  "description": "Client-side Minecraft mod featuring all authentic official Mojang capes, realistic 16-segment cloth physics, Obsidian Dark GUI, keybindings and commands.",
   "authors": [
     "Zentrix"
   ],
   "contact": {
-    "homepage": "https://github.com/zentrix/official-capes-physics"
+    "homepage": "https://github.com/Z3ntrix603/ZenCapes"
   },
   "license": "MIT",
   "icon": "assets/official_capes/textures/capes/minecon_2011.png",
